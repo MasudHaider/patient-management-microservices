@@ -9,7 +9,7 @@ public class PatientRequestDTO {
     @Size(max = 100, message = "name cannot exceed 100 characters")
     private String name;
 
-    @NotBlank(message = "Enail is required")
+    @NotBlank(message = "Email is required")
     @Email(message = "Email should be valid")
     private String email;
 
