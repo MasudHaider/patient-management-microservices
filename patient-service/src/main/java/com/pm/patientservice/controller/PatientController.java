@@ -33,7 +33,7 @@ public class PatientController {
         return ResponseEntity.ok().body(patientResponseDTO);
     }
 
-    @PutMapping("{/id}")
+    @PutMapping("/{id}")
     public ResponseEntity<PatientResponseDTO> updatePatient(
             @PathVariable UUID id, @RequestBody PatientRequestDTO patientRequestDTO){
 
