@@ -1,9 +1,10 @@
 package com.pm.stack;
 
-
+import software.amazon.awscdk.services.ecs.Cluster;
 import software.amazon.awscdk.*;
 import software.amazon.awscdk.services.ec2.*;
 import software.amazon.awscdk.services.ec2.InstanceType;
+import software.amazon.awscdk.services.ecs.CloudMapNamespaceOptions;
 import software.amazon.awscdk.services.msk.CfnCluster;
 import software.amazon.awscdk.services.rds.*;
 import software.amazon.awscdk.services.route53.CfnHealthCheck;
@@ -14,10 +15,10 @@ import java.util.stream.Collectors;
 public class LocalStack extends Stack {
 
     private final Vpc vpc;
+    private final Cluster cluster;
 
-    public LocalStack(final App scope, final String id, final StackProps props){
+    public LocalStack(final App scope, final String id, final StackProps props) {
         super(scope, id, props);
-
         this.vpc = createVpc();
 
         DatabaseInstance authServiceDb =
@@ -33,21 +34,24 @@ public class LocalStack extends Stack {
                 createDbHealthCheck(patientServiceDb, "PatientServiceDBHealthCheck");
 
         CfnCluster mskCluster = createMskCluster();
+
+        this.cluster = createEcsCluster();
     }
 
-    private Vpc createVpc(){
+
+    private Vpc createVpc() {
         return Vpc.Builder.create(this, "PatientManagementVPC")
                 .vpcName("PatientManagementVPC")
                 .maxAzs(2)
                 .build();
     }
 
-    private DatabaseInstance createDatabase(String id, String dbName){
+    private DatabaseInstance createDatabase(String id, String dbName) {
         return DatabaseInstance.Builder.create(this, id)
                 .engine(DatabaseInstanceEngine.postgres(
                         PostgresInstanceEngineProps.builder()
-                            .version(PostgresEngineVersion.VER_17_2)
-                            .build()
+                                .version(PostgresEngineVersion.VER_17_2)
+                                .build()
                 ))
                 .vpc(vpc)
                 .instanceType(InstanceType.of(InstanceClass.BURSTABLE2, InstanceSize.MICRO))
@@ -58,7 +62,7 @@ public class LocalStack extends Stack {
                 .build();
     }
 
-    private CfnHealthCheck createDbHealthCheck(DatabaseInstance db, String id){
+    private CfnHealthCheck createDbHealthCheck(DatabaseInstance db, String id) {
         return CfnHealthCheck.Builder.create(this, id)
                 .healthCheckConfig(CfnHealthCheck.HealthCheckConfigProperty.builder()
                         .type("TCP")
@@ -70,7 +74,7 @@ public class LocalStack extends Stack {
                 .build();
     }
 
-    private CfnCluster createMskCluster(){
+    private CfnCluster createMskCluster() {
         return CfnCluster.Builder.create(this, "MskCluster")
                 .clusterName("kafka-cluster")
                 .kafkaVersion("2.8.0")
@@ -85,7 +89,16 @@ public class LocalStack extends Stack {
                 .build();
     }
 
-    public static void main(final String[] args){
+    private Cluster createEcsCluster() {
+        return Cluster.Builder.create(this, "PatientManagementCluster")
+                .vpc(vpc)
+                .defaultCloudMapNamespace(CloudMapNamespaceOptions.builder()
+                        .name("patient-management.local")
+                        .build())
+                .build();
+    }
+
+    public static void main(final String[] args) {
         App app = new App(AppProps.builder().outdir("./cdk.out").build());
 
         StackProps props = StackProps.builder()
