@@ -41,6 +41,42 @@ public class LocalStack extends Stack {
         CfnCluster mskCluster = createMskCluster();
 
         this.cluster = createEcsCluster();
+
+        FargateService authService =
+                createFargateService("AuthService", "auth-service",
+                        List.of(4005),
+                        authServiceDb,
+                        Map.of("JWT_SECRET", "-JH,2;A?4W^!z<570cdNeaz7}~~Hcc'^"));
+
+        authService.getNode().addDependency(authDbHealthCheck);
+        authService.getNode().addDependency(authServiceDb);
+
+        FargateService billingService =
+                createFargateService("BillingService",
+                        "billing-service",
+                        List.of(4001, 9001),
+                        null, null);
+
+        FargateService analytics =
+                createFargateService("AnalyticsService", "analytics-service",
+                        List.of(4002),
+                        null,
+                        null);
+        analytics.getNode().addDependency(mskCluster);
+
+        FargateService patientService = createFargateService("PatientService",
+                "patient-service",
+                List.of(4000),
+                patientServiceDb,
+                Map.of(
+                        "BILLING_SERVICE_ADDRESS", "host.docker.internal",
+                        "BILLING_SERVICE_GRPC_PORT", "9001"
+                ));
+
+        patientService.getNode().addDependency(patientServiceDb);
+        patientService.getNode().addDependency(patientDbHealthCheck);
+        patientService.getNode().addDependency(billingService);
+        patientService.getNode().addDependency(mskCluster);
     }
 
 
@@ -130,6 +166,7 @@ public class LocalStack extends Stack {
                                         .removalPolicy(RemovalPolicy.DESTROY)
                                         .retention(RetentionDays.ONE_DAY)
                                         .build())
+                                        .streamPrefix(imageName)
                                 .build()));
 
         Map<String, String> envVars = new HashMap<>();
