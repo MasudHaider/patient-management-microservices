@@ -120,7 +120,7 @@ public class LocalStack extends Stack {
     private CfnCluster createMskCluster() {
         return CfnCluster.Builder.create(this, "MskCluster")
                 .clusterName("kafka-cluster")
-                .kafkaVersion("2.8.0")
+                .kafkaVersion("3.8.x")
                 .numberOfBrokerNodes(1)
                 .brokerNodeGroupInfo(CfnCluster.BrokerNodeGroupInfoProperty.builder()
                         .instanceType("kafka.m5.xlarge")
